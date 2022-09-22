@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-managed-disk-3phr
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment3phr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scc2021project3phr
+  template:
+    metadata:
+      labels:
+        app: scc2021project3phr
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+        - name: scc2021-container-3phr
+          image: ronaldocorte/scc2021project3phr:latest
+          volumeMounts:
+            - name: mediavolume
+              mountPath: "/mnt/vol"
+          env:
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "yes"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          ports:
+            - containerPort: 8080
+              name: sccproject3phr
+      volumes:
+        - name: mediavolume
+          persistentVolumeClaim:
+            claimName: azure-managed-disk-3phr
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  scc2021project3phr-service
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  selector:
+    app:  scc2021project3phr
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scc3phr-redis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scc3phr-redis
+  template:
+    metadata:
+      labels:
+        app: scc3phr-redis
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+        - name: scc3phr-redis
+          image: redis
+          env:
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "yes"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 2Gi
+          ports:
+            - containerPort: 6379
+              name: redis
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scc3phr-redis
+spec:
+  ports:
+    - port: 6379
+  selector:
+    app: scc3phr-redis
+
+
+
